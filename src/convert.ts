@@ -442,11 +442,11 @@ function functionToTsType(node: FunctionTypeAnnotation): TSFunctionType {
   // Params
   if (node.params) {
     let paramNames = node.params
-      .map(_ => _.name)
-      .filter(_ => _ !== null)
-      .map(_ => (_ as Identifier).name)
-    f.parameters = node.params.map(_ => {
-      let name = _.name && _.name.name
+      .map(x => x.name)
+      .filter(x => x !== null)
+      .map(x => (x as Identifier).name)
+    f.parameters = node.params.map(x => {
+      let name = x.name && x.name.name
 
       // Generate param name? (Required in TS, optional in Flow)
       if (name == null) {
@@ -456,8 +456,8 @@ function functionToTsType(node: FunctionTypeAnnotation): TSFunctionType {
 
       let id = identifier(name)
 
-      if (_.typeAnnotation) {
-        id.typeAnnotation = tsTypeAnnotation(toTsType(_.typeAnnotation))
+      if (x.typeAnnotation) {
+        id.typeAnnotation = tsTypeAnnotation(toTsType(x.typeAnnotation))
       }
 
       return id
@@ -493,17 +493,17 @@ function objectTypeAnnotationPropertiesAndSpreads(
   const spreads: TSType[] = []
   const properties: TSTypeElement[] = []
 
-  node.properties.forEach(_ => {
-    if (_.type === 'ObjectTypeSpreadProperty') {
-      spreads.push(toTs(_.argument))
+  node.properties.forEach(property => {
+    if (property.type === 'ObjectTypeSpreadProperty') {
+      spreads.push(toTs(property.argument))
     } else {
-      properties.push(toTs(_))
+      properties.push(toTs(property))
     }
   })
 
   if (node.indexers) {
-    node.indexers.forEach(_ => {
-      properties.push(toTsIndexSignature(_))
+    node.indexers.forEach(property => {
+      properties.push(toTsIndexSignature(property))
     })
   }
 

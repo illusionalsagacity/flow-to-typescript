@@ -1,10 +1,11 @@
-import { parse } from '@babel/parser'
-import generate from '@babel/generator'
+// import { parse } from '@babel/parser'
+import * as recast from 'recast';
+// import generate from '@babel/generator'
 import traverse, { Node, Visitor } from '@babel/traverse'
 import { File } from '@babel/types'
 import { sync } from 'glob'
-import { dropWhile, pullAt } from 'lodash'
-import { EOL } from 'os'
+import { /* dropWhile,*/ pullAt } from 'lodash'
+// import { EOL } from 'os'
 import { relative, resolve } from 'path'
 
 type Warning = [string, string, number, number]
@@ -20,9 +21,19 @@ export function addRule(ruleName: string, rule: Rule) {
 }
 
 export async function compile(code: string, filename: string) {
-  const parsed = parse(code, {
-    plugins: ['classProperties', 'flow', 'objectRestSpread'],
-    sourceType: 'module'
+  console.log(`\nCompiling ${filename}...`);
+  // const parsed = recast.parse(code, {
+  //   parser: {
+  //     parse(source: string) {
+  //       return parse(source, {
+  //         plugins: ['classProperties', 'flow', 'objectRestSpread', 'jsx', 'dynamicImport'],
+  //         sourceType: 'module'
+  //       });
+  //     },
+  //   },
+  // });
+  const parsed = recast.parse(code, {
+    parser: require('recast/parsers/flow'),
   })
   let [warnings, ast] = await convert(parsed)
 
@@ -35,9 +46,20 @@ export async function compile(code: string, filename: string) {
     )
   })
 
-  return addTrailingSpace(
-    trimLeadingNewlines(generate(stripAtFlowAnnotation(ast)).code)
-  )
+  ast = stripAtFlowAnnotation(ast);
+
+  try {
+    const output = recast.print(ast).code;
+    console.log('Done.\n');
+    return output;
+  } catch (e) {
+    console.error(e);
+  }
+
+
+  // return addTrailingSpace(
+  //   trimLeadingNewlines(generate(stripAtFlowAnnotation(ast)).code)
+  // )
 }
 
 /**
@@ -86,7 +108,7 @@ export async function convert<T extends Node>(ast: T): Promise<[Warning[], T]> {
 function stripAtFlowAnnotation(ast: File): File {
   let { leadingComments } = ast.program.body[0]
   if (leadingComments) {
-    let index = leadingComments.findIndex(_ => _.value.trim() === '@flow')
+    let index = leadingComments.findIndex(comment => comment.value.trim() === '@flow')
     if (index > -1) {
       pullAt(leadingComments, index)
     }
@@ -94,13 +116,13 @@ function stripAtFlowAnnotation(ast: File): File {
   return ast
 }
 
-function addTrailingSpace(file: string): string {
-  if (file.endsWith(EOL)) {
-    return file
-  }
-  return file + EOL
-}
+// function addTrailingSpace(file: string): string {
+//   if (file.endsWith(EOL)) {
+//     return file
+//   }
+//   return file + EOL
+// }
 
-function trimLeadingNewlines(file: string): string {
-  return dropWhile(file.split(EOL), _ => !_).join(EOL)
-}
+// function trimLeadingNewlines(file: string): string {
+//   return dropWhile(file.split(EOL), _ => !_).join(EOL)
+// }
